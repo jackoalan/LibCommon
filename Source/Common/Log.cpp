@@ -5,39 +5,42 @@
 
 #include <ctime>
 #include <iostream>
+#include <fstream>
 
 namespace NLog
 {
 
 TStringList gErrorLog;
 TString gLogFilename;
-FILE *gpLogFile;
+//FILE *gpLogFile;
+std::ofstream gLogFile;
 
 double gAppStartTime = CTimer::GlobalTime();
 
 bool gInitialized = false;
 TStringList gPreInitLogs;
 
+
 bool InitLog(const TString& rkFilename)
 {
-    fopen_s(&gpLogFile, *rkFilename, "w");
+    gLogFile.open(*rkFilename, std::ios::out);
     gLogFilename = rkFilename;
 
-    if (!gpLogFile)
+    if (!gLogFile.good())
     {
         TString FileName = rkFilename.GetFileName(false);
         TString Extension = rkFilename.GetFileExtension();
         int Num = 0;
 
-        while (!gpLogFile)
+        while (!gLogFile.good())
         {
             if (Num > 999) break;
             TString NewFilename = FileName + "_" + TString::FromInt32(Num, 0, 10) + "." + Extension;
-            fopen_s(&gpLogFile, *NewFilename, "w");
+            gLogFile.open(*NewFilename, std::ios::out);
             Num++;
         }
 
-        if (!gpLogFile)
+        if (!gLogFile.good())
             return false;
     }
 
@@ -45,14 +48,20 @@ bool InitLog(const TString& rkFilename)
     time_t RawTime;
     time(&RawTime);
 
-    tm pTimeInfo;
-    localtime_s(&pTimeInfo, &RawTime);
+    tm TimeInfo;
+#ifdef _MSC_VER
+    localtime_s(&TimeInfo, &RawTime);
+#else
+    localtime_r(&RawTime, &TimeInfo);
+#endif
+
+    tm *pTimeInfo = localtime(&RawTime);
 
     char Buffer[80];
-    strftime(Buffer, 80, "%m/%d/%y %H:%M:%S", &pTimeInfo);
+    strftime(Buffer, 80, "%m/%d/%y %H:%M:%S", &TimeInfo);
 
-    fprintf(gpLogFile, "Opened log file at %s\n", Buffer);
-    fflush(gpLogFile);
+    gLogFile << "Opened log file at " << Buffer << std::endl;
+    gLogFile.flush();
 
 #ifdef APP_FULL_NAME
     // Print app name and version
@@ -72,21 +81,23 @@ bool InitLog(const TString& rkFilename)
     return true;
 }
 
-void WriteInternal(EMsgType Type, const char* pkMsg, const va_list& VarArgs)
+void WriteInternal(EMsgType Type, const char* pkMsg, va_list& VarArgs)
 {
     char LineBuffer[512];
     double Time = CTimer::GlobalTime() - gAppStartTime;
     int Offset = sprintf(LineBuffer, "[%08.3f] ", Time);
-    vsprintf(&LineBuffer[Offset], pkMsg, VarArgs);
+
+    vsnprintf(&LineBuffer[Offset], 512, pkMsg, VarArgs);
+
 
     // Write to log file
     if (!gInitialized)
         gPreInitLogs.push_back(LineBuffer);
 
-    else if (gpLogFile)
+    else if (gLogFile.good())
     {
-        fprintf(gpLogFile, "%s\n", LineBuffer);
-        fflush(gpLogFile);
+        gLogFile << LineBuffer << std::endl;
+        gLogFile.flush();
     }
 
     std::cout << LineBuffer << "\n";

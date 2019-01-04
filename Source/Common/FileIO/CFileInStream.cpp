@@ -1,24 +1,24 @@
 #include "CFileInStream.h"
 
 CFileInStream::CFileInStream()
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
 }
 
 CFileInStream::CFileInStream(const TString& rkFile)
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
     Open(rkFile, EEndian::BigEndian);
 }
 
 CFileInStream::CFileInStream(const TString& rkFile, EEndian FileEndianness)
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
     Open(rkFile, FileEndianness);
 }
 
 CFileInStream::CFileInStream(const CFileInStream& rkSrc)
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
     Open(rkSrc.mName, rkSrc.mDataEndianness);
 
@@ -37,7 +37,8 @@ void CFileInStream::Open(const TString& rkFile, EEndian FileEndianness)
     if (IsValid())
         Close();
 
-    _wfopen_s(&mpFStream, ToWChar(rkFile), L"rb");
+    mFStream = std::ifstream(rkFile.Data(), std::ios::binary);
+    //mpFStream = fopen(ToWChar(rkFile), L"rb");
     mName = rkFile;
     mDataEndianness = FileEndianness;
 
@@ -55,39 +56,47 @@ void CFileInStream::Open(const TString& rkFile, EEndian FileEndianness)
 
 void CFileInStream::Close()
 {
-    if (IsValid())
-        fclose(mpFStream);
-    mpFStream = nullptr;
+//    if (IsValid())
+//        fclose(mpFStream);
+//    mpFStream = nullptr;
 }
 
 void CFileInStream::ReadBytes(void *pDst, uint32 Count)
 {
     if (!IsValid()) return;
-    fread(pDst, 1, Count, mpFStream);
+    mFStream.read(static_cast<char *>(pDst), Count);
 }
 
 bool CFileInStream::Seek(int32 Offset, uint32 Origin)
 {
     if (!IsValid()) return false;
-    return (fseek(mpFStream, Offset, Origin) != 0);
+    return Seek64(Offset, Origin);
 }
 
 bool CFileInStream::Seek64(int64 Offset, uint32 Origin)
 {
     if (!IsValid()) return false;
-    return (_fseeki64(mpFStream, Offset, Origin) != 0);
+
+    std::ios::seekdir Dir = {};
+    switch (Origin) {
+        case SEEK_SET: Dir = std::ios::beg; break;
+        case SEEK_CUR: Dir = std::ios::cur; break;
+        case SEEK_END: Dir = std::ios::end; break;
+    }
+    mFStream.seekg(Offset, Dir);
+    return !mFStream.fail();
 }
 
 uint32 CFileInStream::Tell() const
 {
     if (!IsValid()) return 0;
-    return ftell(mpFStream);
+    return static_cast<uint32>(mFStream.tellg());
 }
 
 uint64 CFileInStream::Tell64() const
 {
     if (!IsValid()) return 0;
-    return _ftelli64(mpFStream);
+    return static_cast<uint64>(mFStream.tellg());
 }
 
 bool CFileInStream::EoF() const
@@ -97,7 +106,7 @@ bool CFileInStream::EoF() const
 
 bool CFileInStream::IsValid() const
 {
-    return (mpFStream != 0);
+    return mFStream.is_open() && !mFStream.bad();
 }
 
 uint32 CFileInStream::Size() const

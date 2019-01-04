@@ -38,3 +38,10 @@ Makefile*
 # LibCommon files
 Build/*
 Externals/*
+
+# IntelliJ / CLion
+.idea
+
+# Dew
+.dew
+dewfile.local.json

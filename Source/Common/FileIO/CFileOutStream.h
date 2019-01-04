@@ -2,11 +2,13 @@
 #define CFILEOUTSTREAM_H
 
 #include "IOutputStream.h"
+#include <fstream>
 
 class CFileOutStream : public IOutputStream
 {
 private:
-    FILE *mpFStream;
+    mutable std::ofstream mFStream;
+    //FILE *mpFStream;
     TString mName;
     uint32 mSize;
 

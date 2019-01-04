@@ -3,11 +3,13 @@
 
 #include "IInputStream.h"
 #include "IOUtil.h"
+#include <fstream>
 
 class CFileInStream : public IInputStream
 {
 private:
-    FILE *mpFStream;
+    mutable std::ifstream mFStream;
+    //FILE *mpFStream;
     TString mName;
     uint32 mFileSize;
 

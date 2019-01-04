@@ -1,4 +1,5 @@
 #include "CVector2f.h"
+#include <cmath>
 
 CVector2f::CVector2f()
 {

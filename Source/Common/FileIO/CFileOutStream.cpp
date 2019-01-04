@@ -1,25 +1,25 @@
 #include "CFileOutStream.h"
 
 CFileOutStream::CFileOutStream()
-    : mpFStream(nullptr)
-    , mSize(0)
+//    : mpFStream(nullptr)
+    : mSize(0)
 {
 }
 
 CFileOutStream::CFileOutStream(const TString& rkFile)
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
     Open(rkFile, EEndian::BigEndian);
 }
 
 CFileOutStream::CFileOutStream(const TString& rkFile, EEndian FileEndianness)
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
     Open(rkFile, FileEndianness);
 }
 
 CFileOutStream::CFileOutStream(const CFileOutStream& rkSrc)
-    : mpFStream(nullptr)
+//    : mpFStream(nullptr)
 {
     Open(rkSrc.mName, rkSrc.mDataEndianness);
 
@@ -29,8 +29,8 @@ CFileOutStream::CFileOutStream(const CFileOutStream& rkSrc)
 
 CFileOutStream::~CFileOutStream()
 {
-    if (IsValid())
-        Close();
+//    if (IsValid())
+//        Close();
 }
 
 void CFileOutStream::Open(const TString& rkFile, EEndian FileEndianness)
@@ -38,7 +38,7 @@ void CFileOutStream::Open(const TString& rkFile, EEndian FileEndianness)
     if (IsValid())
         Close();
 
-    _wfopen_s(&mpFStream, ToWChar(rkFile), L"wb");
+    mFStream = std::ofstream(rkFile.Data(), std::ios::out | std::ios::binary);
     mName = rkFile;
     mDataEndianness = FileEndianness;
     mSize = 0;
@@ -49,9 +49,10 @@ void CFileOutStream::Update(const TString& rkFile, EEndian FileEndianness)
     if (IsValid())
         Close();
 
-    _wfopen_s(&mpFStream, ToWChar(rkFile), L"rb+");
+    mFStream = std::ofstream(rkFile.Data(), std::ios::out | std::ios::binary | std::ios::app);
     mName = rkFile;
     mDataEndianness = FileEndianness;
+
     Seek(0x0, SEEK_END);
     mSize = Tell();
     Seek(0x0, SEEK_SET);
@@ -59,41 +60,47 @@ void CFileOutStream::Update(const TString& rkFile, EEndian FileEndianness)
 
 void CFileOutStream::Close()
 {
-    if (IsValid())
-        fclose(mpFStream);
-    mpFStream = nullptr;
+    mFStream.close();
     mSize = 0;
 }
 
 void CFileOutStream::WriteBytes(const void *pkSrc, uint32 Count)
 {
     if (!IsValid()) return;
-    fwrite(pkSrc, 1, Count, mpFStream);
+    mFStream.write(static_cast<const char *>(pkSrc), Count);
     if (Tell() > mSize) mSize = Tell();
 }
 
 bool CFileOutStream::Seek(int32 Offset, uint32 Origin)
 {
     if (!IsValid()) return false;
-    return (fseek(mpFStream, Offset, Origin) != 0);
+    return Seek64(Offset, Origin);
 }
 
 bool CFileOutStream::Seek64(int64 Offset, uint32 Origin)
 {
     if (!IsValid()) return false;
-    return (_fseeki64(mpFStream, Offset, Origin) != 0);
+    std::ios::seekdir Dir = {};
+    switch (Origin) {
+        case SEEK_SET: Dir = std::ios::beg; break;
+        case SEEK_CUR: Dir = std::ios::cur; break;
+        case SEEK_END: Dir = std::ios::end; break;
+    }
+
+    mFStream.seekp(Offset, Dir);
+    return !mFStream.fail();
 }
 
 uint32 CFileOutStream::Tell() const
 {
     if (!IsValid()) return 0;
-    return ftell(mpFStream);
+    return static_cast<uint32>(mFStream.tellp());
 }
 
 uint64 CFileOutStream::Tell64() const
 {
     if (!IsValid()) return 0;
-    return _ftelli64(mpFStream);
+    return static_cast<uint64>(mFStream.tellp());
 }
 
 bool CFileOutStream::EoF() const
@@ -103,7 +110,7 @@ bool CFileOutStream::EoF() const
 
 bool CFileOutStream::IsValid() const
 {
-    return (mpFStream != 0);
+    return mFStream.good();
 }
 
 uint32 CFileOutStream::Size() const
