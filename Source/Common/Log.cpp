@@ -12,7 +12,6 @@ namespace NLog
 
 TStringList gErrorLog;
 TString gLogFilename;
-//FILE *gpLogFile;
 std::ofstream gLogFile;
 
 double gAppStartTime = CTimer::GlobalTime();
@@ -49,11 +48,7 @@ bool InitLog(const TString& rkFilename)
     time(&RawTime);
 
     tm TimeInfo;
-#ifdef _MSC_VER
-    localtime_s(&TimeInfo, &RawTime);
-#else
     localtime_r(&RawTime, &TimeInfo);
-#endif
 
     tm *pTimeInfo = localtime(&RawTime);
 

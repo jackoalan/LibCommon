@@ -1,24 +1,20 @@
 #include "CFileInStream.h"
 
 CFileInStream::CFileInStream()
-//    : mpFStream(nullptr)
 {
 }
 
 CFileInStream::CFileInStream(const TString& rkFile)
-//    : mpFStream(nullptr)
 {
     Open(rkFile, EEndian::BigEndian);
 }
 
 CFileInStream::CFileInStream(const TString& rkFile, EEndian FileEndianness)
-//    : mpFStream(nullptr)
 {
     Open(rkFile, FileEndianness);
 }
 
 CFileInStream::CFileInStream(const CFileInStream& rkSrc)
-//    : mpFStream(nullptr)
 {
     Open(rkSrc.mName, rkSrc.mDataEndianness);
 
@@ -56,9 +52,7 @@ void CFileInStream::Open(const TString& rkFile, EEndian FileEndianness)
 
 void CFileInStream::Close()
 {
-//    if (IsValid())
-//        fclose(mpFStream);
-//    mpFStream = nullptr;
+    mFStream.close();
 }
 
 void CFileInStream::ReadBytes(void *pDst, uint32 Count)

@@ -45,7 +45,7 @@ std::pair<bool,float> RayPlaneIntersection(const CRay& rkRay, const CPlane& rkPl
     // Are ray and plane parallel?
     float Denom = rkPlane.Normal().Dot(rkRay.Direction());
 
-    if (Abs(Denom) < std::numeric_limits<float>::epsilon())
+    if (Abs(Denom) < FLT_EPSILON)
         return std::pair<bool,float>(false, 0.f);
 
     // Not parallel

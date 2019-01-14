@@ -8,7 +8,6 @@ class CFileOutStream : public IOutputStream
 {
 private:
     mutable std::ofstream mFStream;
-    //FILE *mpFStream;
     TString mName;
     uint32 mSize;
 

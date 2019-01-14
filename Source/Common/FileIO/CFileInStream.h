@@ -9,7 +9,6 @@ class CFileInStream : public IInputStream
 {
 private:
     mutable std::ifstream mFStream;
-    //FILE *mpFStream;
     TString mName;
     uint32 mFileSize;
 

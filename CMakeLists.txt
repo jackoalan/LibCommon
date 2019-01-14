@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.12)
 include(CMakePackageConfigHelpers)
 
-project(libcommon VERSION 0.1 LANGUAGES CXX)
+project(libcommon VERSION 0.1 LANGUAGES C CXX)
 
 find_package(codegen CONFIG REQUIRED)
 find_package(GLEW 2.1 REQUIRED)
@@ -17,13 +17,12 @@ file(GLOB_RECURSE source_files
 
 add_library(libcommon ${source_files})
 
-set_target_properties(libcommon
-    PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
-        C_STANDARD 11
-        C_STANDARD_REQUIRED ON
-)
+target_compile_features(libcommon PRIVATE cxx_std_17 c_std_11)
+
+# Make MSVC act like a real C/C++ compiler
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+    target_compile_options(libcommon PRIVATE "/permissive-")
+endif()
 
 target_include_directories(libcommon
     PRIVATE

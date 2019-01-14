@@ -2,16 +2,16 @@
 #define CFILELOCK_H
 
 #include <cstdio>
+#include <fstream>
 #include "Common/TString.h"
 
 // Maintain a file handle to prevent other processes from accessing the file.
 class CFileLock
 {
-    FILE* mpFile;
+    std::ifstream mFile;
 
 public:
     CFileLock()
-        : mpFile(nullptr)
     {}
 
     ~CFileLock()
@@ -22,13 +22,12 @@ public:
     void Lock(const TString& rkPath)
     {
         Release();
-        mpFile = _wfopen(ToWChar(rkPath), L"a+");
+        mFile.open(*rkPath, std::ios::app);
     }
 
     void Release()
     {
-        if (mpFile)
-            fclose(mpFile);
+        mFile.close();
     }
 };
 

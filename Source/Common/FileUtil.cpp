@@ -1,21 +1,12 @@
 #include "FileUtil.h"
 #include "Macros.h"
 #include "Common/FileIO/CFileInStream.h"
-#include <system_error>
 
+#include <filesystem>
+#include <system_error>
 #include <fstream>
 
-#if defined(unix) || defined(__unix__) || defined(__unix) || defined(__APPLE__)
-#define UNIX
-#endif
-
-#ifdef UNIX
-#include <sys/stat.h>
-#include <dirent.h>
-#include <unistd.h>
-#else
-// TODO: Windows support
-#endif
+using namespace std::filesystem;
 
 namespace FileUtil
 {
@@ -38,37 +29,22 @@ bool IsRoot(const TString& rkPath)
 
 bool IsFile(const TString& rkFilePath)
 {
-#ifdef UNIX
-    struct stat Stats = {};
-    return stat(*rkFilePath, &Stats) == 0 && S_ISREG(Stats.st_mode);
-#else
     return is_regular_file(ToPath(*rkFilePath));
-#endif
 }
 
 bool IsDirectory(const TString& rkDirPath)
 {
-#ifdef UNIX
-    struct stat Stats = {};
-    return stat(*rkDirPath, &Stats) == 0 && S_ISDIR(Stats.st_mode);
-#else
     return is_directory(ToPath(*rkDirPath));
-#endif
 }
 
 bool IsAbsolute(const TString& rkDirPath)
 {
-#ifdef UNIX
-    return rkDirPath.StartsWith('/');
-#else
     return ToPath(*rkDirPath).is_absolute();
-#endif
 }
 
 bool IsRelative(const TString& rkDirPath)
 {
-    return !IsAbsolute(rkDirPath);
-    //return ToPath(*rkDirPath).is_relative();
+    return ToPath(*rkDirPath).is_relative();
 }
 
 bool IsEmpty(const TString& rkDirPath)
@@ -79,20 +55,7 @@ bool IsEmpty(const TString& rkDirPath)
         return false;
     }
 
-#ifdef UNIX
-    bool IsEmpty = false;
-    DIR *pDir;
-    pDir = opendir(*rkDirPath);
-    if (pDir) {
-        if (readdir(pDir) == nullptr) {
-            IsEmpty = true;
-        }
-        closedir(pDir);
-    }
-    return IsEmpty;
-#else
     return is_empty(ToPath(*rkDirPath));
-#endif
 }
 
 bool MakeDirectory(const TString& rkNewDir)
@@ -103,11 +66,7 @@ bool MakeDirectory(const TString& rkNewDir)
         return false;
     }
 
-#ifdef UNIX
-    return mkdir(*rkNewDir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == 0;
-#else
     return create_directories(ToPath(*rkNewDir));
-#endif
 }
 
 bool CopyFile(const TString& rkOrigPath, const TString& rkNewPath)
@@ -120,21 +79,10 @@ bool CopyFile(const TString& rkOrigPath, const TString& rkNewPath)
 
     MakeDirectory(rkNewPath.GetFileDirectory());
 
-#ifdef UNIX
-    std::ifstream InputStream(*rkOrigPath, std::ios::binary);
-    std::ofstream OutputStream(*rkNewPath, std::ios::out | std::ios::binary);
-    char buffer[1024];
-    while (!InputStream.eof() && InputStream.good()) {
-        auto ReadCount = InputStream.read(buffer, 1024).gcount();
-        OutputStream.write(buffer, ReadCount);
-    }
-    return true;
-#else
     std::error_code Error;
     // call std::filesystem::copy, not std::copy
-    std::experimental::filesystem::copy(ToPath(*rkOrigPath), ToPath(*rkNewPath), Error);
+    std::filesystem::copy(ToPath(*rkOrigPath), ToPath(*rkNewPath), Error);
     return (Error.value() == 0);
-#endif
 }
 
 bool CopyDirectory(const TString& rkOrigPath, const TString& rkNewPath)
@@ -147,39 +95,10 @@ bool CopyDirectory(const TString& rkOrigPath, const TString& rkNewPath)
 
     MakeDirectory(rkNewPath.GetFileDirectory());
 
-#ifdef UNIX
-    bool IsOk = true;
-    DIR *pDir;
-    dirent *pDirEnt;
-    pDir = opendir(*rkOrigPath);
-    if (!pDir) {
-        return false;
-    }
-
-    while ((pDirEnt = readdir(pDir)) == nullptr) {
-        TString EntryPath = rkOrigPath + '/' + pDirEnt->d_name;
-        TString DestPath = rkNewPath + '/' + pDirEnt->d_name;
-        if (IsDirectory(EntryPath)) {
-            if (!CopyDirectory(EntryPath, DestPath)) {
-                IsOk = false;
-                break;
-            }
-        } else {
-            if (!CopyFile(EntryPath, DestPath)) {
-                IsOk = false;
-                break;
-            }
-        }
-    }
-    closedir(pDir);
-    return IsOk;
-
-#else
     std::error_code Error;
     // call std::filesystem::copy, not std::copy
-    std::experimental::filesystem::copy(ToPath(*rkOrigPath), ToPath(*rkNewPath), Error);
+    std::filesystem::copy(ToPath(*rkOrigPath), ToPath(*rkNewPath), Error);
     return (Error.value() == 0);
-#endif
 }
 
 bool MoveFile(const TString& rkOldPath, const TString& rkNewPath)
@@ -196,13 +115,9 @@ bool MoveFile(const TString& rkOldPath, const TString& rkNewPath)
         return false;
     }
 
-#ifdef UNIX
-    return rename(*rkOldPath, *rkNewPath) == 0;
-#else
     std::error_code Error;
     rename(ToPath(*rkOldPath), ToPath(*rkNewPath), Error);
     return Error.value() == 0;
-#endif
 }
 
 bool MoveDirectory(const TString& rkOldPath, const TString& rkNewPath)
@@ -219,23 +134,15 @@ bool MoveDirectory(const TString& rkOldPath, const TString& rkNewPath)
         return false;
     }
 
-#ifdef UNIX
-    return rename(*rkOldPath, *rkNewPath) == 0;
-#else
     std::error_code Error;
     rename(ToPath(*rkOldPath), ToPath(*rkNewPath), Error);
     return Error.value() == 0;
-#endif
 }
 
 bool DeleteFile(const TString& rkFilePath)
 {
-#ifdef UNIX
-    return remove(*rkFilePath) == 0;
-#else
     if (!IsFile(rkFilePath)) return false;
     return remove(ToPath(*rkFilePath)) == 1;
-#endif
 }
 
 bool DeleteDirectory(const TString& rkDirPath, bool FailIfNotEmpty)
@@ -257,38 +164,10 @@ bool DeleteDirectory(const TString& rkDirPath, bool FailIfNotEmpty)
     if (FailIfNotEmpty && !IsEmpty(rkDirPath))
         return false;
 
-#ifdef UNIX
-    bool IsOk = true;
-    DIR *pDir;
-    dirent *pDirEnt;
-    pDir = opendir(*rkDirPath);
-    if (!pDir) {
-        return false;
-    }
-
-    while ((pDirEnt = readdir(pDir)) == nullptr) {
-        TString EntryPath = rkDirPath + '/' + pDirEnt->d_name;
-        if (IsDirectory(EntryPath)) {
-            if (!DeleteDirectory(EntryPath, false)) {
-                IsOk = false;
-                break;
-            }
-        } else {
-            if (!DeleteFile(EntryPath)) {
-                IsOk = false;
-                break;
-            }
-        }
-    }
-
-    closedir(pDir);
-    return IsOk;
-#else
     // Delete directory
     std::error_code Error;
     remove_all(ToPath(*rkDirPath), Error);
     return (Error.value() == 0);
-#endif
 }
 
 bool ClearDirectory(const TString& rkDirPath)
@@ -328,82 +207,39 @@ bool ClearDirectory(const TString& rkDirPath)
 
 uint64 FileSize(const TString &rkFilePath)
 {
-#ifdef UNIX
-    struct stat st = {};
-    int status = stat(*rkFilePath, &st);
-    if (status != 0) {
-        return static_cast<uint64>(-1);
-    }
-    return static_cast<uint64>(st.st_size);
-#else
     return (uint64) (Exists(rkFilePath) ? file_size(ToPath(*rkFilePath)) : -1);
-#endif
 }
 
 uint64 LastModifiedTime(const TString& rkFilePath)
 {
-#ifdef UNIX
-    struct stat st = {};
-    int status = stat(*rkFilePath, &st);
-    if (status != 0) {
-        return 0;
-    }
-    return static_cast<uint64>(st.st_mtime);
-#else
     return (uint64) last_write_time(ToPath(*rkFilePath)).time_since_epoch().count();
-#endif
 }
 
 TString WorkingDirectory()
 {
-#ifdef UNIX
-    uint32_t Size = 64;
-    while (true)
-    {
-        char Path[Size];
-        if (getcwd(Path, Size) == nullptr)
-        {
-            if (errno != ERANGE)
-            {
-                break;
-            }
-            Size += 64;
-            continue;
-        }
-
-        return Path;
-    }
-    return "";
-#else
     return current_path().string();
-#endif
 }
 
 TString MakeAbsolute(TString Path)
 {
-    if (IsAbsolute(Path)) {
-        return Path;
-    }
-    return WorkingDirectory() + "/" + Path;
+    TStringList Components = Path.Split("/\\");
+    TStringList::iterator Prev;
 
-//    TStringList Components = Path.Split("/\\");
-//    TStringList::iterator Prev;
-//
-//    for (TStringList::iterator Iter = Components.begin(); Iter != Components.end(); Iter++)
-//    {
-//        if (*Iter == ".")
-//            Iter = Components.erase(Iter);
-//        else if (*Iter == "..")
-//            Iter = std::prev(Components.erase(Prev, std::next(Iter)));
-//
-//        Prev = Iter;
-//    }
-//
-//    TString Out;
-//    for (auto it = Components.begin(); it != Components.end(); it++)
-//        Out += *it + "/";
-//
-//    return Out;
+    for (TStringList::iterator Iter = Components.begin(); Iter != Components.end(); Iter++)
+    {
+        if (*Iter == ".")
+            Iter = Components.erase(Iter);
+        else if (*Iter == "..")
+            Iter = std::prev(Components.erase(Prev, std::next(Iter)));
+
+        Prev = Iter;
+    }
+
+    TString Out;
+    for (auto it = Components.begin(); it != Components.end(); it++)
+        Out += *it + "/";
+
+    return Out;
 }
 
 TString MakeRelative(const TString& rkPath, const TString& rkRelativeTo /*= WorkingDirectory()*/)
@@ -637,32 +473,6 @@ void GetDirectoryContents(TString DirPath, TStringList& rOut, bool Recursive /*=
 {
     if (IsDirectory(DirPath))
     {
-#ifdef UNIX
-        DIR *pDir;
-        dirent *pDirEnt;
-        pDir = opendir(*DirPath);
-        if (!pDir) {
-            return;
-        }
-
-        while ((pDirEnt = readdir(pDir)) == nullptr) {
-            TString EntryPath = DirPath + '/' + pDirEnt->d_name;
-            if (IsDirectory(EntryPath)) {
-                if (IncludeDirs) {
-                    rOut.push_back(EntryPath);
-                }
-                if (Recursive) {
-                    GetDirectoryContents(EntryPath, rOut, true, IncludeFiles, IncludeDirs);
-                }
-            } else {
-                if (IncludeFiles) {
-                    rOut.push_back(EntryPath);
-                }
-            }
-        }
-
-        closedir(pDir);
-#else
         DirPath.Replace("\\", "/");
         bool IncludeAll = IncludeFiles && IncludeDirs;
 
@@ -688,34 +498,11 @@ void GetDirectoryContents(TString DirPath, TStringList& rOut, bool Recursive /*=
                 AddFileLambda(It->path().string());
             }
         }
-#endif
     }
 }
 
 TString FindFileExtension(const TString& rkDir, const TString& rkName)
 {
-#ifdef UNIX
-    DIR *pDir;
-    dirent *pDirEnt;
-    pDir = opendir(*rkDir);
-    if (!pDir) {
-        return "";
-    }
-
-    TString Result = "";
-
-    while ((pDirEnt = readdir(pDir)) == nullptr) {
-        TString EntryPath = rkDir + '/' + pDirEnt->d_name;
-        if (IsFile(EntryPath)) {
-            if (EntryPath.GetFileName(false) == rkName) {
-                Result = EntryPath.GetFileExtension();
-            }
-        }
-    }
-
-    closedir(pDir);
-    return Result;
-#else
     for (directory_iterator It(ToPath(*rkDir)); It != directory_iterator(); ++It)
     {
         TString Name = It->path().filename().string();
@@ -723,7 +510,6 @@ TString FindFileExtension(const TString& rkDir, const TString& rkName)
     }
 
     return "";
-#endif
 }
 
 bool LoadFileToString(const TString& rkFilePath, TString& rOut)
