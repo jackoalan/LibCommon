@@ -4,13 +4,15 @@
         {
             "name": "CodeGen",
             "type": "git",
-            "url": "https://github.com/arukibree/CodeGen.git",
-            "head": "master"
+            //"url":  "https://github.com/arukibree/CodeGen.git",
+            //"head": "master"
+            "url":  "https://github.com/sfuller/CodeGen.git",
+            "head": "cmake"
         },
         {
             "name": "tinyxml2",
             "type": "git",
-            "url": "https://github.com/leethomason/tinyxml2",
+            "url":  "https://github.com/leethomason/tinyxml2",
             "head": "master"
         }
     ]
