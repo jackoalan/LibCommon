@@ -7,6 +7,9 @@ find_package(codegen CONFIG REQUIRED)
 find_package(GLEW 2.1 REQUIRED)
 find_package(tinyxml2 CONFIG REQUIRED)
 
+# TODO: only do this for libc++ and libstdc++
+find_library(FS_LIBRARY c++fs)
+
 include(codegen)
 
 file(GLOB_RECURSE source_files
@@ -29,7 +32,11 @@ target_include_directories(libcommon
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/Source>
 )
 
-target_link_libraries(libcommon GLEW::GLEW tinyxml2::tinyxml2 codegen::codegen)
+target_link_libraries(
+    libcommon
+    PUBLIC GLEW::GLEW tinyxml2::tinyxml2 
+    PRIVATE codegen::codegen "${FS_LIBRARY}"
+)
 
 get_target_property(libcommon_include_directories libcommon INCLUDE_DIRECTORIES)
 
