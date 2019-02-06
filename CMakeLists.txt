@@ -3,14 +3,20 @@ include(CMakePackageConfigHelpers)
 
 project(libcommon VERSION 0.1 LANGUAGES C CXX)
 
-find_package(codegen CONFIG REQUIRED)
+#find_package(codegen CONFIG REQUIRED)
 find_package(GLEW 2.1 REQUIRED)
-find_package(tinyxml2 CONFIG REQUIRED)
+# find_package(tinyxml2 CONFIG REQUIRED)
+
+set(CODEGEN_BUILD_PACKAGE_DURING_CONFIGURE true)
+add_subdirectory("Externals/CodeGen")
+
+add_subdirectory("Externals/tinyxml2")
+
 
 # TODO: only do this for libc++ and libstdc++
 find_library(FS_LIBRARY c++fs)
 
-include(codegen)
+include(Externals/CodeGen/cmake/Modules/codegen.cmake)
 
 file(GLOB_RECURSE source_files
     "Source/*.cpp"
@@ -34,12 +40,13 @@ target_include_directories(libcommon
 
 target_link_libraries(
     libcommon
-    PUBLIC GLEW::GLEW tinyxml2::tinyxml2 
-    PRIVATE codegen::codegen "${FS_LIBRARY}"
+    PUBLIC GLEW::GLEW tinyxml2 
+    PRIVATE codegen "${FS_LIBRARY}"
 )
 
 get_target_property(libcommon_include_directories libcommon INCLUDE_DIRECTORIES)
 
+set(CODEGEN_PACKAGE "${CMAKE_CURRENT_BINARY_DIR}/Externals/CodeGen/codegen.tar.gz")
 add_codegen_targets(
     "${source_files}"
     codegen_generated_files
@@ -68,6 +75,7 @@ install(
     TARGETS libcommon
     EXPORT libcommonTargets
     ARCHIVE DESTINATION "lib"
+    LIBRARY DESTINATION "lib"
     INCLUDES DESTINATION "include/libcommon"  # This sets the INTERFACE_INCLUDE_DIRECTORIES property of the target.
 )
 
